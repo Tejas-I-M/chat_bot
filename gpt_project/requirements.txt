@@ -1,0 +1,21 @@
+# =============================================================================
+# requirements.txt — Version-Locked Dependencies
+# Character-Level GPT from Scratch | Optimized for GTX 1650 (4GB VRAM)
+# =============================================================================
+
+# Deep Learning Framework — CUDA-enabled build recommended
+# Install GPU version: pip install torch --index-url https://download.pytorch.org/whl/cu118
+torch>=2.1.0
+
+# Web UI Framework — Powers the chat interface in app.py
+streamlit>=1.32.0
+
+# Numerical Computing — Tensor manipulation and data preprocessing
+numpy>=1.26.0
+
+# HTTP Client — Used in utils.py to auto-download the TinyShakespeare dataset
+requests>=2.31.0
+
+# Serialization — Saves/loads the character tokenizer mappings (stoi/itos)
+# pickle is part of Python stdlib, but pickle5 provides backport if needed
+# pickle5>=0.0.12  # Uncomment only if running Python < 3.8

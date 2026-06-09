@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+.env
+.venv
+venv/
+env/
+
+# Model weights & data (large files — don't commit to git)
+model_weights.pth
+data/input.txt
+data/meta.pkl
+
+# Streamlit
+.streamlit/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/

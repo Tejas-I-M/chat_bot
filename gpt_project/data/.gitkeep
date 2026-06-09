@@ -1,0 +1,8 @@
+# This file intentionally left as a placeholder.
+# The actual dataset (input.txt) is auto-downloaded by train_script.py
+# via src/utils.py → ensure_data_exists().
+#
+# To manually download:
+#   wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt
+#
+# This file is listed in .gitignore and should NOT be committed to version control.
