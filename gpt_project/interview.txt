@@ -1,0 +1,198 @@
+Interview Notes: NanoGPT Character-Level GPT
+
+1) Problem Statement
+
+The goal of this project was to build a small but complete GPT-style language model from scratch, end to end, using only PyTorch. The system had to train on a tiny Shakespeare corpus, learn next-character prediction, and expose the model through a clean chat UI that could generate text interactively.
+
+In interview terms, the problem was:
+"How do I build and ship a decoder-only Transformer that can train on a small dataset, run on modest hardware, and be easy to explain from first principles?"
+
+2) What I Built
+
+I built three main parts:
+
+The training pipeline in train_script.py:
+- downloads or loads the TinyShakespeare dataset
+- builds a character-level tokenizer
+- splits the data into train and validation sets
+- instantiates a decoder-only Transformer
+- trains with AdamW
+- evaluates periodically
+- saves model_weights.pth plus tokenizer metadata
+
+The model in src/model.py:
+- token embeddings
+- learned positional embeddings
+- stacked Transformer blocks
+- multi-head causal self-attention
+- feed-forward layers
+- residual connections
+- LayerNorm
+- autoregressive generation
+
+The Streamlit app in app.py:
+- loads the saved model and tokenizer
+- provides a chat-style interface
+- caches the model in memory for faster rerenders
+- lets the user enter a seed prompt and generate Shakespeare-style continuation
+
+3) Impact
+
+The impact was mainly educational and practical:
+- it demonstrates a full LLM training/inference loop without high-level wrappers
+- it is interview-friendly because every design choice is visible in code
+- it runs on a 4 GB GPU target, so it is lightweight enough to reproduce
+- it produces a usable local demo where the model can be tested interactively
+
+If I were presenting impact in a product setting, I would say the project reduced the gap between theory and implementation by turning Transformer concepts into a runnable system.
+
+4) What Was Hard
+
+The hardest parts were:
+- getting the attention and masking logic correct
+- keeping the model small enough to fit within limited VRAM
+- balancing sequence length, batch size, and model depth
+- making training stable enough to converge on a tiny dataset
+- making the inference UI responsive after the model was loaded
+
+5) How I Overcame It
+
+I handled those constraints by simplifying the architecture and being explicit about the training setup:
+- used character-level tokenization to avoid tokenizer complexity
+- kept the context window small at 64 tokens
+- used 4 layers, 4 heads, and 128-dimensional embeddings to stay within memory limits
+- used Pre-LN residual Transformer blocks for stability
+- used AdamW instead of plain Adam
+- clipped gradients to prevent exploding updates
+- cached the loaded model in Streamlit so rerenders did not reload weights
+
+6) Why These Technologies
+
+PyTorch:
+- best fit for a from-scratch Transformer implementation
+- low-level enough to expose the mechanics of attention, masking, and loss computation
+
+Streamlit:
+- fastest way to turn the model into a usable demo UI
+- good for local experimentation and interview presentation
+
+Python:
+- simple training and inference scripting
+- strong ecosystem for ML workflows
+
+TinyShakespeare dataset:
+- small, fast to train, and standard for character-level language modeling
+- ideal for demonstrating architecture rather than data engineering
+
+7) How I Would Scale It
+
+If this moved beyond a demo, I would scale it in stages:
+- replace character-level tokenization with BPE or SentencePiece
+- use a larger and cleaner corpus
+- increase model size, context length, and batch size
+- add mixed precision training
+- shard data loading and use faster input pipelines
+- separate training and inference services
+- run inference behind a proper API with request queuing and autoscaling
+- store checkpoints in object storage instead of only local disk
+
+8) Database, Schema Design, Relations, and Indexing
+
+This project does not use a database.
+
+There is no relational schema, no joins, and no index design because the system is file-based:
+- data/input.txt stores the corpus
+- data/meta.pkl stores the tokenizer
+- model_weights.pth stores the learned parameters
+
+If asked in an interview, the honest answer is that persistence is handled by files rather than a DB because the project is a small ML demo, not a transactional application. If I later added user accounts, prompt history, or analytics, then I would introduce a database with tables such as users, conversations, messages, checkpoints, and training_runs, plus indexes on user_id, conversation_id, and created_at.
+
+9) Auth and Authorization
+
+This project currently has no authentication or authorization layer.
+
+The Streamlit app is local and single-user oriented, so there are no roles, permissions, or access-control policies yet. In a production version, I would add:
+- authentication for user identity
+- authorization rules for admin vs user access
+- per-user isolation for chat history and saved outputs
+- rate limiting and request validation on the inference endpoint
+
+10) Bottlenecks
+
+The main bottlenecks are:
+- autoregressive generation, because tokens are produced one at a time
+- attention cost, which grows with sequence length
+- repeated inference reruns in Streamlit if the model is not cached
+- limited VRAM on smaller GPUs
+- tiny dataset size, which constrains output quality more than compute does
+
+11) How I Made It Faster
+
+I improved performance by keeping the design small and avoiding unnecessary recomputation:
+- reduced the model width and depth to fit the hardware target
+- used a short block size to keep attention cheap
+- cached the model with st.cache_resource in the Streamlit app
+- moved the model to eval mode for inference
+- used torch.no_grad() during generation
+- saved and reused the tokenizer instead of rebuilding it each time
+- clipped gradients so training remained stable enough to avoid wasted runs
+
+12) How the Code Is Built, Tested, and Deployed
+
+Build:
+- the code is plain Python, organized into app.py, train_script.py, and src/
+- training builds the tokenizer and saves model_weights.pth
+- the app loads the saved tokenizer and weights at runtime
+
+Test:
+- there is no formal automated test suite in the repository
+- validation is mostly manual through training loss checks and sample generation
+- the app is sanity-checked by loading the saved model and running prompts through the UI
+
+Deploy:
+- the project is run locally with python train_script.py and streamlit run app.py
+- there is no container, CI/CD pipeline, or cloud deployment config in the current repository
+
+13) Tools Used
+
+- PyTorch for model and training
+- Streamlit for the interface
+- requests for dataset download
+- numpy for utility operations
+- pickle for tokenizer persistence
+- standard Python libraries for file handling and path management
+
+14) What I Track and Alert On
+
+This project does not currently have production monitoring or alerting.
+
+If I operationalized it, I would track:
+- training loss and validation loss
+- perplexity
+- GPU memory usage
+- generation latency
+- error rate on model load and inference requests
+- throughput and request queue time
+
+Alerts would fire on:
+- model load failures
+- sudden validation loss spikes
+- inference latency regressions
+- GPU OOM errors
+- repeated request failures
+
+15) Caching
+
+The main cache in the project is the Streamlit resource cache:
+- load_model_and_tokenizer() is wrapped with @st.cache_resource
+- this prevents the model from being reloaded on every rerun
+- the impact is lower latency and less GPU memory churn
+
+There is also implicit reuse of saved artifacts:
+- tokenizer metadata is written once to data/meta.pkl
+- model weights are written once to model_weights.pth and reused by the app
+
+16) Short Interview Summary
+
+If I had to answer in 30 seconds:
+"I built a from-scratch character-level GPT in PyTorch, trained it on TinyShakespeare, and exposed it through a Streamlit chat interface. The hardest parts were getting causal attention, training stability, and memory usage right on limited hardware. I kept it fast by using a small GPT configuration, gradient clipping, no-grad inference, and Streamlit resource caching. The project doesn’t use a database, auth layer, or alerting yet because it is a local ML demo, but those would be the next production steps."
